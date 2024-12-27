@@ -34,8 +34,8 @@ spec:
         - from: 13
           to: 16
           replicas: 4
-        - from: 17
-          to: 1
-          replicas: 2
+        - from: 2
+          to: 4
+          replicas: 4
   # TODO(user): Add fields here
 
