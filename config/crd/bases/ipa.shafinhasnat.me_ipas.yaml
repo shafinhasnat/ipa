@@ -55,13 +55,11 @@ spec:
                       items:
                         properties:
                           from:
-                            format: int32
                             type: integer
                           replicas:
                             format: int32
                             type: integer
                           to:
-                            format: int32
                             type: integer
                         type: object
                       type: array
