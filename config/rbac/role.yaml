@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ipa.shafinhasnat.me
+  resources:
+  - ipas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ipa.shafinhasnat.me
+  resources:
+  - ipas/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ipa.shafinhasnat.me
+  resources:
+  - ipas/status
+  verbs:
+  - get
+  - patch
+  - update

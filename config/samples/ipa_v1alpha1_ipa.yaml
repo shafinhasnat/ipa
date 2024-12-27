@@ -1,0 +1,21 @@
+apiVersion: ipa.shafinhasnat.me/v1alpha1
+kind: IPA
+metadata:
+  labels:
+    app.kubernetes.io/name: ipa
+    app.kubernetes.io/managed-by: kustomize
+  name: ipa-sample
+spec:
+  rules:
+    - deployment: test-deployment
+      namespace: test
+      defaultReplicas: 1
+      rules:
+        - from: 13
+          to: 16
+          replicas: 4
+        - from: 17
+          to: 20
+          replicas: 6
+  # TODO(user): Add fields here
+

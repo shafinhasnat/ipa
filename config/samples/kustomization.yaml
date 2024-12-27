@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- ipa_v1alpha1_ipa.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

@@ -1,0 +1,23 @@
+# permissions for end users to view ipas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: ipa
+    app.kubernetes.io/managed-by: kustomize
+  name: ipa-viewer-role
+rules:
+- apiGroups:
+  - ipa.shafinhasnat.me
+  resources:
+  - ipas
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ipa.shafinhasnat.me
+  resources:
+  - ipas/status
+  verbs:
+  - get
