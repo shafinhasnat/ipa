@@ -29,7 +29,7 @@ type IPASpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of IPA. Edit ipa_types.go to remove/update
-	IpaRules []IPARules `json:"ipaRules,omitempty"`
+	IPARules []IPARules `json:"ipaRules,omitempty"`
 }
 
 type IPARules struct {
@@ -40,8 +40,8 @@ type IPARules struct {
 }
 
 type Rules struct {
-	From     int32 `json:"from,omitempty"`
-	To       int32 `json:"to,omitempty"`
+	From     uint8 `json:"from,omitempty"`
+	To       uint8 `json:"to,omitempty"`
 	Replicas int32 `json:"replicas,omitempty"`
 }
 

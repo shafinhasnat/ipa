@@ -18,11 +18,19 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	v1 "k8s.io/api/apps/v1"
+	// apiv1 "k8s.io/api/core/v1"
+	"fmt"
+
+	// "time"
 
 	ipav1alpha1 "github.com/shafinhasnat/ipa/api/v1alpha1"
 )
@@ -50,8 +58,66 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
+	ipa := &ipav1alpha1.IPA{}
+	err := r.Get(ctx, req.NamespacedName, ipa)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	err = r.ScaleDeployments(ctx, *ipa, req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return ctrl.Result{}, err
+	}
+	// deployment := &appsv1.Deployment{}
+	return ctrl.Result{RequeueAfter: time.Duration(5 * time.Second)}, nil
+}
 
-	return ctrl.Result{}, nil
+func (r *IPAReconciler) ScaleDeployments(ctx context.Context, ipa ipav1alpha1.IPA, req ctrl.Request) error {
+	ipaRules := ipa.Spec.IPARules
+	for _, ipaRule := range ipaRules {
+		now := time.Now().Hour()
+		// fmt.Println("Current hour ->", now.Hour())
+		spec_namespace := ipaRule.Namespace
+		spec_deployment := ipaRule.Deployment
+		deployment := &v1.Deployment{}
+		err := r.Get(ctx, types.NamespacedName{
+			Namespace: spec_namespace,
+			Name:      spec_deployment,
+		}, deployment)
+		if err != nil {
+			return err
+		}
+		for _, rule := range ipaRule.Rules {
+			if isTimeBetween(rule.From, rule.To, uint8(now)) {
+				if *deployment.Spec.Replicas != rule.Replicas {
+					desiredReplicas := rule.Replicas
+					deployment.Spec.Replicas = &desiredReplicas
+					err := r.Update(ctx, deployment)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			// else {
+			// 	fmt.Println("Out of time range")
+			// 	if deployment.Spec.Replicas != &ipaRule.DefaultReplicas {
+			// 		fmt.Println("Out of time range - replicas not match")
+			// 		deployment.Spec.Replicas = &ipaRule.DefaultReplicas
+			// 		err := r.Update(ctx, deployment)
+			// 		if err != nil {
+			// 			return err
+			// 		}
+			// 	}
+			// }
+		}
+	}
+	return nil
+}
+func isTimeBetween(from, to, now uint8) bool {
+	if to < from {
+		return now >= from || now <= to
+	}
+	return now >= from && now <= to
 }
 
 // SetupWithManager sets up the controller with the Manager.
