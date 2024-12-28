@@ -29,20 +29,19 @@ type IPASpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of IPA. Edit ipa_types.go to remove/update
-	IPARules []IPARules `json:"ipaRules,omitempty"`
+	Metadata Metadata `json:"metadata,omitempty"`
 }
 
-type IPARules struct {
-	Deployment      string  `json:"deployment,omitempty"`
-	Namespace       string  `json:"namespace,omitempty"`
-	DefaultReplicas int32   `json:"defaultReplicas,omitempty"`
-	Rules           []Rules `json:"rules,omitempty"`
+type Metadata struct {
+	PrometheusUri   string     `json:"prometheusUri,omitempty"`
+	ApiKey          string     `json:"apiKey,omitempty"`
+	DefaultReplicas int        `json:"defaultReplicas,omitempty"`
+	IPAGroup        []IPAGroup `json:"ipaGroup,omitempty"`
 }
 
-type Rules struct {
-	From     uint8 `json:"from,omitempty"`
-	To       uint8 `json:"to,omitempty"`
-	Replicas int32 `json:"replicas,omitempty"`
+type IPAGroup struct {
+	Deployment string `json:"deployment,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
 }
 
 // IPAStatus defines the observed state of IPA.

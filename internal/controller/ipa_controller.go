@@ -26,13 +26,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	v1 "k8s.io/api/apps/v1"
 	// apiv1 "k8s.io/api/core/v1"
-	"fmt"
+	appsv1 "k8s.io/api/apps/v1"
 
 	// "time"
 
 	ipav1alpha1 "github.com/shafinhasnat/ipa/api/v1alpha1"
+	controller "github.com/shafinhasnat/ipa/internal/agent"
 )
 
 // IPAReconciler reconciles a IPA object
@@ -63,58 +63,44 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	err = r.ScaleDeployments(ctx, *ipa, req)
+	err = r.IPA(ctx, ipa, req)
 	if err != nil {
-		fmt.Println(err.Error())
 		return ctrl.Result{}, err
 	}
 	// deployment := &appsv1.Deployment{}
-	return ctrl.Result{RequeueAfter: time.Duration(5 * time.Second)}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(30 * time.Second)}, nil
 }
 
-func (r *IPAReconciler) ScaleDeployments(ctx context.Context, ipa ipav1alpha1.IPA, req ctrl.Request) error {
-	ipaRules := ipa.Spec.IPARules
-	for _, ipaRule := range ipaRules {
-		now := time.Now().Hour()
-		deployment := &v1.Deployment{}
-		err := r.Get(ctx, types.NamespacedName{
-			Namespace: ipaRule.Namespace,
-			Name:      ipaRule.Deployment,
-		}, deployment)
+func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.Request) error {
+	apikey := ipa.Spec.Metadata.ApiKey
+	prometheus := ipa.Spec.Metadata.PrometheusUri
+	// defaultreplicas := ipa.Spec.Metadata.DefaultReplicas
+	ipagroups := ipa.Spec.Metadata.IPAGroup
+	for _, ipagroup := range ipagroups {
+		deployment := &appsv1.Deployment{}
+		err := r.Get(ctx, types.NamespacedName{Name: ipagroup.Deployment, Namespace: ipagroup.Namespace}, deployment)
 		if err != nil {
 			return err
 		}
-		ruleMatched := false
-		for _, rule := range ipaRule.Rules {
-			if isTimeBetween(rule.From, rule.To, uint8(now)) {
-				ruleMatched = true
-				if *deployment.Spec.Replicas != rule.Replicas {
-					deployment.Spec.Replicas = &rule.Replicas
-					err := r.Update(ctx, deployment)
-					if err != nil {
-						return err
-					}
-				}
-				break
+		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name)
+		if err != nil {
+			return err
+		}
+		// fmt.Println(prometheusData)
+		replicas, err := controller.AskLLM(prometheusData, apikey)
+		if err != nil {
+			return err
+		}
+		if *deployment.Spec.Replicas != replicas {
+			deployment.Spec.Replicas = &replicas
+			err := r.Update(ctx, deployment)
+			if err != nil {
+				return err
 			}
 		}
-		if !ruleMatched {
-			if *deployment.Spec.Replicas != ipaRule.DefaultReplicas {
-				deployment.Spec.Replicas = &ipaRule.DefaultReplicas
-				err := r.Update(ctx, deployment)
-				if err != nil {
-					return err
-				}
-			}
-		}
+
 	}
 	return nil
-}
-func isTimeBetween(from, to, now uint8) bool {
-	if to < from {
-		return now >= from || now <= to
-	}
-	return now >= from && now <= to
 }
 
 // SetupWithManager sets up the controller with the Manager.

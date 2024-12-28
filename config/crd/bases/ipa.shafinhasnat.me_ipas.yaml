@@ -39,32 +39,26 @@ spec:
           spec:
             description: IPASpec defines the desired state of IPA.
             properties:
-              ipaRules:
+              metadata:
                 description: Foo is an example field of IPA. Edit ipa_types.go to
                   remove/update
-                items:
-                  properties:
-                    defaultReplicas:
-                      format: int32
-                      type: integer
-                    deployment:
-                      type: string
-                    namespace:
-                      type: string
-                    rules:
-                      items:
-                        properties:
-                          from:
-                            type: integer
-                          replicas:
-                            format: int32
-                            type: integer
-                          to:
-                            type: integer
-                        type: object
-                      type: array
-                  type: object
-                type: array
+                properties:
+                  apiKey:
+                    type: string
+                  defaultReplicas:
+                    type: integer
+                  ipaGroup:
+                    items:
+                      properties:
+                        deployment:
+                          type: string
+                        namespace:
+                          type: string
+                      type: object
+                    type: array
+                  prometheusUri:
+                    type: string
+                type: object
             type: object
           status:
             description: IPAStatus defines the observed state of IPA.
