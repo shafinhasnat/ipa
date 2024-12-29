@@ -82,7 +82,7 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 		if err != nil {
 			return err
 		}
-		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, "FD")
+		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, "FD", ipagroup.Namespace)
 		if err != nil {
 			return err
 		}
