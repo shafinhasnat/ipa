@@ -6,10 +6,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
+
+type LLMResponse struct {
+	Status       string
+	Message      string
+	ReplicaCount int32
+}
 
 func PrometheusAPI(baseURL string, deployment string, pods string, promql string) (string, error) {
 	req, err := http.NewRequest("GET", baseURL, nil)
@@ -41,95 +46,57 @@ func PrometheusAPI(baseURL string, deployment string, pods string, promql string
 	}
 	return string(body), nil
 }
-func QueryPrometheus(prometheus string, deployment string, pods string, namespace string) (string, error) {
+func QueryPrometheus(prometheus string, deployment string, pods []string, namespace string) (string, error) {
 	baseURL := fmt.Sprintf("%s/api/v1/query_range", prometheus)
-	promql_cpu_usage := fmt.Sprintf("avg(rate(container_cpu_usage_seconds_total{pod=\"%s\"}[5m]))", pods)
-	cpu_usage, err := PrometheusAPI(baseURL, deployment, pods, promql_cpu_usage)
+	podNames := strings.Join(pods, "|")
+	promql_deployment_replica := fmt.Sprintf("kube_deployment_spec_replicas{deployment=\"%s\", namespace=\"%s\"}", deployment, namespace)
+	deployment_replicas, err := PrometheusAPI(baseURL, deployment, podNames, promql_deployment_replica)
 	if err != nil {
 		return "", err
 	}
-	promql_ram_usage := fmt.Sprintf("avg(container_memory_usage_bytes{pod=\"%s\"})", pods)
-	ram_usage, err := PrometheusAPI(baseURL, deployment, pods, promql_ram_usage)
+	promql_cpu_usage := fmt.Sprintf("avg(rate(container_cpu_usage_seconds_total{pod=~\"%s\", namespace=\"%s\"}[5m]))", podNames, namespace)
+	cpu_usage, err := PrometheusAPI(baseURL, deployment, podNames, promql_cpu_usage)
 	if err != nil {
 		return "", err
 	}
-	response := fmt.Sprintf("CPU usage - promql: %s metrics: %s\nRAM usage - promql: %s metrics: %s\n", promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage)
+	promql_ram_usage := fmt.Sprintf("avg(container_memory_usage_bytes{pod=~\"%s\", namespace=\"%s\"})", podNames, namespace)
+	ram_usage, err := PrometheusAPI(baseURL, deployment, podNames, promql_ram_usage)
+	if err != nil {
+		return "", err
+	}
+	response := fmt.Sprintf("Deployment replicas - promql: %s metrics: %s\nCPU usage - promql: %s metrics: %s\nRAM usage - promql: %s metrics: %s\n", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage)
+	response = strings.Trim(response, "\"")
 	return string(response), nil
 }
 
-func AskLLM(prometheusData string, apikey string) (int32, error) {
-	// fmt.Println(prometheusData)
-	requestlimit := "limits.cpu: 500m,requests.cpu=200m"
-	prompt := fmt.Sprintf("Here are some data of cpu usage by a deployment - %s\nRequest limit is %s. I need to know how many replicas are needed to handle the load smoothly. Just give me the number. Nothing else.", prometheusData, requestlimit)
-	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+func GeminiAPI(url string, prompt string) (LLMResponse, error) {
+	escapedPrompt := strings.ReplaceAll(prompt, "\n", "\\n")
+	escapedPrompt = strings.ReplaceAll(escapedPrompt, "\"", "\\\"")
 
-	// Create request body
-	reqBody := map[string]interface{}{
-		"contents": []map[string]interface{}{
-			{
-				"parts": []map[string]interface{}{
-					{
-						"text": prompt,
-					},
-				},
-			},
-		},
-	}
-
-	jsonBody, err := json.Marshal(reqBody)
+	payload := fmt.Sprintf(`{"metrics": "%s"}`, escapedPrompt)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(payload)))
 	if err != nil {
-		return -1, err
+		return LLMResponse{}, err
 	}
-
-	// Create request
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-	if err != nil {
-		return -1, err
-	}
-
-	// Add headers and query params
-	q := req.URL.Query()
-	q.Add("key", apikey)
-	req.URL.RawQuery = q.Encode()
-
 	req.Header.Set("Content-Type", "application/json")
-
-	// Make request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return -1, err
+		return LLMResponse{}, err
 	}
 	defer resp.Body.Close()
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return -1, err
-	}
-	var response struct {
-		Candidates []struct {
-			Content struct {
-				Parts []struct {
-					Text string `json:"text"`
-				} `json:"parts"`
-			} `json:"content"`
-		} `json:"candidates"`
+		return LLMResponse{}, err
 	}
 
+	var response map[string]interface{}
 	if err := json.Unmarshal(body, &response); err != nil {
-		return -1, err
+		return LLMResponse{}, err
 	}
-
-	if len(response.Candidates) == 0 || len(response.Candidates[0].Content.Parts) == 0 {
-		return -1, err
-	}
-	replicas := response.Candidates[0].Content.Parts[0].Text
-	replicas = strings.Trim(replicas, "\n")
-	replica, err := strconv.Atoi(replicas)
-	if err != nil {
-		return -1, err
-	}
-	r := int32(replica)
-	fmt.Println(r)
-	return r, nil
+	return LLMResponse{
+		Status:       response["status"].(string),
+		Message:      response["message"].(string),
+		ReplicaCount: int32(response["replica_count"].(float64)),
+	}, nil
 }

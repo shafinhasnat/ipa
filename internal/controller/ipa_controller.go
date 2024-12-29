@@ -26,8 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	// apiv1 "k8s.io/api/core/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	// "time"
 
@@ -72,9 +72,7 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 }
 
 func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.Request) error {
-	apikey := ipa.Spec.Metadata.ApiKey
 	prometheus := ipa.Spec.Metadata.PrometheusUri
-	// defaultreplicas := ipa.Spec.Metadata.DefaultReplicas
 	ipagroups := ipa.Spec.Metadata.IPAGroup
 	for _, ipagroup := range ipagroups {
 		deployment := &appsv1.Deployment{}
@@ -82,17 +80,25 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 		if err != nil {
 			return err
 		}
-		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, "FD", ipagroup.Namespace)
+		podList := &corev1.PodList{}
+		err = r.List(ctx, podList, client.InNamespace(ipagroup.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels))
 		if err != nil {
 			return err
 		}
-		// fmt.Println(prometheusData)
-		replicas, err := controller.AskLLM(prometheusData, apikey)
+		var podNames []string
+		for _, pod := range podList.Items {
+			podNames = append(podNames, pod.Name)
+		}
+		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, podNames, ipagroup.Namespace)
 		if err != nil {
 			return err
 		}
-		if *deployment.Spec.Replicas != replicas {
-			deployment.Spec.Replicas = &replicas
+		llmResponse, err := controller.GeminiAPI(prometheusData, prometheusData)
+		if err != nil {
+			return err
+		}
+		if *deployment.Spec.Replicas != llmResponse.ReplicaCount {
+			deployment.Spec.Replicas = &llmResponse.ReplicaCount
 			err := r.Update(ctx, deployment)
 			if err != nil {
 				return err
