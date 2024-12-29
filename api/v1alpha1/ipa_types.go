@@ -36,6 +36,7 @@ type Metadata struct {
 	PrometheusUri   string     `json:"prometheusUri,omitempty"`
 	ApiKey          string     `json:"apiKey,omitempty"`
 	DefaultReplicas int        `json:"defaultReplicas,omitempty"`
+	LLMAgent        string     `json:"llmAgent,omitempty"`
 	IPAGroup        []IPAGroup `json:"ipaGroup,omitempty"`
 }
 

@@ -65,14 +65,13 @@ func QueryPrometheus(prometheus string, deployment string, pods []string, namesp
 		return "", err
 	}
 	response := fmt.Sprintf("Deployment replicas - promql: %s metrics: %s\nCPU usage - promql: %s metrics: %s\nRAM usage - promql: %s metrics: %s\n", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage)
-	response = strings.Trim(response, "\"")
 	return string(response), nil
 }
 
 func GeminiAPI(url string, prompt string) (LLMResponse, error) {
 	escapedPrompt := strings.ReplaceAll(prompt, "\n", "\\n")
 	escapedPrompt = strings.ReplaceAll(escapedPrompt, "\"", "\\\"")
-
+	// url = fmt.Sprintf("%s/askllm", url)
 	payload := fmt.Sprintf(`{"metrics": "%s"}`, escapedPrompt)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(payload)))
 	if err != nil {

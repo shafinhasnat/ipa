@@ -93,7 +93,7 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 		if err != nil {
 			return err
 		}
-		llmResponse, err := controller.GeminiAPI(prometheusData, prometheusData)
+		llmResponse, err := controller.GeminiAPI(ipa.Spec.Metadata.LLMAgent, prometheusData)
 		if err != nil {
 			return err
 		}
