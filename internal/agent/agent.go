@@ -11,20 +11,14 @@ import (
 	"time"
 )
 
-func QueryPrometheus(prometheus string, deployment string) (string, error) {
-
-	baseURL := fmt.Sprintf("%s/api/v1/query_range", prometheus)
-
-	// Create URL with query parameters
+func PrometheusAPI(baseURL string, deployment string, pods string, promql string) (string, error) {
 	req, err := http.NewRequest("GET", baseURL, nil)
 	if err != nil {
 		return "", err
 	}
-	promql := fmt.Sprintf("avg(rate(container_cpu_usage_seconds_total{pod=~\"%s-.*\"}[5m]))", deployment)
 	q := req.URL.Query()
 	q.Add("query", promql)
 
-	// Get timestamps for start/end times
 	now := time.Now().UTC()
 	end := now.Format(time.RFC3339)
 	start := now.Add(-5 * time.Minute).Format(time.RFC3339)
@@ -41,13 +35,26 @@ func QueryPrometheus(prometheus string, deployment string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
-
 	return string(body), nil
+}
+func QueryPrometheus(prometheus string, deployment string, pods string, namespace string) (string, error) {
+	baseURL := fmt.Sprintf("%s/api/v1/query_range", prometheus)
+	promql_cpu_usage := fmt.Sprintf("avg(rate(container_cpu_usage_seconds_total{pod=\"%s\"}[5m]))", pods)
+	cpu_usage, err := PrometheusAPI(baseURL, deployment, pods, promql_cpu_usage)
+	if err != nil {
+		return "", err
+	}
+	promql_ram_usage := fmt.Sprintf("avg(container_memory_usage_bytes{pod=\"%s\"})", pods)
+	ram_usage, err := PrometheusAPI(baseURL, deployment, pods, promql_ram_usage)
+	if err != nil {
+		return "", err
+	}
+	response := fmt.Sprintf("CPU usage - promql: %s metrics: %s\nRAM usage - promql: %s metrics: %s\n", promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage)
+	return string(response), nil
 }
 
 func AskLLM(prometheusData string, apikey string) (int32, error) {
