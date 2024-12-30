@@ -46,7 +46,7 @@ func PrometheusAPI(baseURL string, deployment string, pods string, promql string
 	}
 	return string(body), nil
 }
-func QueryPrometheus(prometheus string, deployment string, pods []string, namespace string) (string, error) {
+func QueryPrometheus(prometheus string, deployment string, pods []string, namespace string, resourceInfo string) (string, error) {
 	baseURL := fmt.Sprintf("%s/api/v1/query_range", prometheus)
 	podNames := strings.Join(pods, "|")
 	promql_deployment_replica := fmt.Sprintf("kube_deployment_spec_replicas{deployment=\"%s\", namespace=\"%s\"}", deployment, namespace)
@@ -64,7 +64,7 @@ func QueryPrometheus(prometheus string, deployment string, pods []string, namesp
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_ram_usage)
 	}
-	response := fmt.Sprintf("Deployment replicas - promql: %s metrics: %s\nCPU usage - promql: %s metrics: %s\nRAM usage - promql: %s metrics: %s\n", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage)
+	response := fmt.Sprintf("Deployment replicas - promql: %s metrics: %s\nCPU usage - promql: %s metrics: %s\nRAM usage - promql: %s metrics: %s\nResource request and limits: %s", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage, resourceInfo)
 	return string(response), nil
 }
 

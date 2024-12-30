@@ -67,7 +67,7 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{RequeueAfter: time.Duration(1 * time.Minute)}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(10 * time.Second)}, nil
 }
 
 func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.Request) error {
@@ -79,6 +79,14 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 		if err != nil {
 			return fmt.Errorf("error getting deployment: %v", err)
 		}
+		var resourceInfo string
+		for _, container := range deployment.Spec.Template.Spec.Containers {
+			resourceInfo = fmt.Sprintf("CPU Resource Requests: %v, CPU Resource Limits: %v, Memory Resource Requests: %v, Memory Resource Limits: %v",
+				container.Resources.Requests.Cpu().String(),
+				container.Resources.Limits.Cpu().String(),
+				container.Resources.Requests.Memory().String(),
+				container.Resources.Limits.Memory().String())
+		}
 		podList := &corev1.PodList{}
 		err = r.List(ctx, podList, client.InNamespace(ipagroup.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels))
 		if err != nil {
@@ -88,7 +96,7 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 		for _, pod := range podList.Items {
 			podNames = append(podNames, pod.Name)
 		}
-		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, podNames, ipagroup.Namespace)
+		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, podNames, ipagroup.Namespace, resourceInfo)
 		if err != nil {
 			return fmt.Errorf("error querying prometheus: %v", err)
 		}
