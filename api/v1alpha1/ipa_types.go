@@ -33,16 +33,14 @@ type IPASpec struct {
 }
 
 type Metadata struct {
-	PrometheusUri   string     `json:"prometheusUri,omitempty"`
-	ApiKey          string     `json:"apiKey,omitempty"`
-	DefaultReplicas int        `json:"defaultReplicas,omitempty"`
-	LLMAgent        string     `json:"llmAgent,omitempty"`
-	IPAGroup        []IPAGroup `json:"ipaGroup,omitempty"`
+	PrometheusUri string     `json:"prometheusUri"`
+	LLMAgent      string     `json:"llmAgent"`
+	IPAGroup      []IPAGroup `json:"ipaGroup"`
 }
 
 type IPAGroup struct {
-	Deployment string `json:"deployment,omitempty"`
-	Namespace  string `json:"namespace,omitempty"`
+	Deployment string `json:"deployment"`
+	Namespace  string `json:"namespace"`
 }
 
 // IPAStatus defines the observed state of IPA.
