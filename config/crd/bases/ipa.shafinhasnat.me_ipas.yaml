@@ -43,10 +43,6 @@ spec:
                 description: Foo is an example field of IPA. Edit ipa_types.go to
                   remove/update
                 properties:
-                  apiKey:
-                    type: string
-                  defaultReplicas:
-                    type: integer
                   ipaGroup:
                     items:
                       properties:
@@ -54,12 +50,19 @@ spec:
                           type: string
                         namespace:
                           type: string
+                      required:
+                      - deployment
+                      - namespace
                       type: object
                     type: array
                   llmAgent:
                     type: string
                   prometheusUri:
                     type: string
+                required:
+                - ipaGroup
+                - llmAgent
+                - prometheusUri
                 type: object
             type: object
           status:

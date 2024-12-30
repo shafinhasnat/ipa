@@ -29,7 +29,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	// "time"
+	"fmt"
 
 	ipav1alpha1 "github.com/shafinhasnat/ipa/api/v1alpha1"
 	controller "github.com/shafinhasnat/ipa/internal/agent"
@@ -67,8 +67,7 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	// deployment := &appsv1.Deployment{}
-	return ctrl.Result{RequeueAfter: time.Duration(30 * time.Second)}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(1 * time.Minute)}, nil
 }
 
 func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.Request) error {
@@ -78,12 +77,12 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 		deployment := &appsv1.Deployment{}
 		err := r.Get(ctx, types.NamespacedName{Name: ipagroup.Deployment, Namespace: ipagroup.Namespace}, deployment)
 		if err != nil {
-			return err
+			return fmt.Errorf("error getting deployment: %v", err)
 		}
 		podList := &corev1.PodList{}
 		err = r.List(ctx, podList, client.InNamespace(ipagroup.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels))
 		if err != nil {
-			return err
+			return fmt.Errorf("error getting pods: %v", err)
 		}
 		var podNames []string
 		for _, pod := range podList.Items {
@@ -91,17 +90,17 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 		}
 		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, podNames, ipagroup.Namespace)
 		if err != nil {
-			return err
+			return fmt.Errorf("error querying prometheus: %v", err)
 		}
 		llmResponse, err := controller.GeminiAPI(ipa.Spec.Metadata.LLMAgent, prometheusData)
 		if err != nil {
-			return err
+			return fmt.Errorf("error querying llm: %v", err)
 		}
 		if *deployment.Spec.Replicas != llmResponse.ReplicaCount {
 			deployment.Spec.Replicas = &llmResponse.ReplicaCount
 			err := r.Update(ctx, deployment)
 			if err != nil {
-				return err
+				return fmt.Errorf("error updating deployment: %v", err)
 			}
 		}
 
