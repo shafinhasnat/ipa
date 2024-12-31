@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -67,7 +68,7 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{RequeueAfter: time.Duration(10 * time.Second)}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(1 * time.Minute)}, nil
 }
 
 func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.Request) error {
@@ -104,12 +105,28 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 		if err != nil {
 			return fmt.Errorf("error querying llm: %v", err)
 		}
-		if *deployment.Spec.Replicas != llmResponse.ReplicaCount {
-			deployment.Spec.Replicas = &llmResponse.ReplicaCount
+		if *deployment.Spec.Replicas != llmResponse.Config.Replicas {
+			deployment.Spec.Replicas = &llmResponse.Config.Replicas
 			err := r.Update(ctx, deployment)
 			if err != nil {
 				return fmt.Errorf("error updating deployment: %v", err)
 			}
+		}
+		for i := range deployment.Spec.Template.Spec.Containers {
+			container := &deployment.Spec.Template.Spec.Containers[i]
+			container.Resources = corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse(llmResponse.Config.CPURequest),
+					corev1.ResourceMemory: resource.MustParse(llmResponse.Config.MemoryRequest),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse(llmResponse.Config.CPULimit),
+					corev1.ResourceMemory: resource.MustParse(llmResponse.Config.MemoryLimit),
+				},
+			}
+		}
+		if err := r.Update(ctx, deployment); err != nil {
+			return fmt.Errorf("failed to update deployment: %v", err)
 		}
 
 	}
