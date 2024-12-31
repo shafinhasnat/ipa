@@ -11,9 +11,17 @@ import (
 )
 
 type LLMResponse struct {
-	Status       string
-	Message      string
-	ReplicaCount int32
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Config  Config `json:"text"`
+}
+
+type Config struct {
+	Replicas      int32  `json:"replicas"`
+	CPULimit      string `json:"cpu_limit"`
+	CPURequest    string `json:"cpu_request"`
+	MemoryLimit   string `json:"memory_limit"`
+	MemoryRequest string `json:"memory_request"`
 }
 
 func PrometheusAPI(baseURL string, deployment string, pods string, promql string) (string, error) {
@@ -31,7 +39,6 @@ func PrometheusAPI(baseURL string, deployment string, pods string, promql string
 	q.Add("start", start)
 	q.Add("end", end)
 	q.Add("step", "60s")
-
 	req.URL.RawQuery = q.Encode()
 
 	client := &http.Client{}
@@ -54,7 +61,7 @@ func QueryPrometheus(prometheus string, deployment string, pods []string, namesp
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_deployment_replica)
 	}
-	promql_cpu_usage := fmt.Sprintf("avg(rate(container_cpu_usage_seconds_total{pod=~\"%s\", namespace=\"%s\"}[5m]))", podNames, namespace)
+	promql_cpu_usage := fmt.Sprintf("rate(container_cpu_usage_seconds_total{pod=~\"%s\", namespace=\"%s\"}[2m])", podNames, namespace)
 	cpu_usage, err := PrometheusAPI(baseURL, deployment, podNames, promql_cpu_usage)
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_cpu_usage)
@@ -64,7 +71,12 @@ func QueryPrometheus(prometheus string, deployment string, pods []string, namesp
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_ram_usage)
 	}
-	response := fmt.Sprintf("Deployment replicas - promql: %s metrics: %s\nCPU usage - promql: %s metrics: %s\nRAM usage - promql: %s metrics: %s\nResource request and limits: %s", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage, resourceInfo)
+	promql_node_available_memory := "node_memory_MemAvailable_bytes"
+	node_available_memory, err := PrometheusAPI(baseURL, deployment, podNames, promql_node_available_memory)
+	if err != nil {
+		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_node_available_memory)
+	}
+	response := fmt.Sprintf("Deployment replicas - promql: %s metrics: %s\nCPU usage - promql: %s metrics: %s\nRAM usage - promql: %s metrics: %s\nResource request and limits: %s\nNode available memory - promql: %s metrics: %s", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage, resourceInfo, promql_node_available_memory, node_available_memory)
 	return string(response), nil
 }
 
@@ -92,14 +104,9 @@ func GeminiAPI(url string, prompt string) (LLMResponse, error) {
 		return LLMResponse{}, fmt.Errorf("error reading response body: %v", err)
 	}
 
-	var response map[string]interface{}
+	var response LLMResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return LLMResponse{}, fmt.Errorf("error unmarshalling response: %v", err)
 	}
-	fmt.Println(response)
-	return LLMResponse{
-		Status:       response["status"].(string),
-		Message:      response["message"].(string),
-		ReplicaCount: int32(response["replica_count"].(float64)),
-	}, nil
+	return response, nil
 }
