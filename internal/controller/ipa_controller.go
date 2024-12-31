@@ -66,6 +66,16 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 	err = r.IPA(ctx, ipa, req)
 	if err != nil {
+		ipa.Status.Status = string(err.Error())
+		err = r.Status().Update(ctx, ipa)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, err
+	}
+	ipa.Status.Status = "Success"
+	err = r.Status().Update(ctx, ipa)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{RequeueAfter: time.Duration(1 * time.Minute)}, nil
