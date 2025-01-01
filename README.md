@@ -1,8 +1,8 @@
-# ipa
-// TODO(user): Add simple overview of use/purpose
+# IPA
+IPA or Intelligent Pod Autoscaler is a Kubernetes operator that automatically scales your deployment based on the resource usage of the pods.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+IPA (Intelligent Pod Autoscaler) is a Kubernetes operator that provides intelligent and automated scaling of deployments based on real-time resource utilization metrics. Unlike the standard Horizontal Pod Autoscaler (HPA), IPA makes scaling decisions by analyzing detailed resource usage patterns from Prometheus metrics, including resource consumption. It allows you to define custom scaling groups per deployment through IPAGroup configurations, where you can specify which deployments to monitor and their corresponding namespaces. IPA continuously monitors the specified deployments, queries Prometheus for resource metrics, and automatically adjusts the replica count and resource requests/limits to optimize resource utilization while maintaining performance. This makes it particularly useful for applications with varying workload patterns where traditional threshold-based scaling might not be optimal.
 
 ## Getting Started
 
@@ -86,11 +86,8 @@ its dependencies.
 Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
 
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/ipa/<tag or branch>/dist/install.yaml
+kubectl apply -f dist/install.yaml
 ```
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
 
 **NOTE:** Run `make help` for more information on all potential `make` targets
 
