@@ -8,7 +8,7 @@ metadata:
 spec:
   metadata:
     prometheusUri: http://prometheus-server.default.svc
-    llmAgent: http://127.0.0.1:5000
+    llmAgent: http://192.168.0.236:5000
     ipaGroup:
       - deployment: cpuload
         namespace: cpuload
