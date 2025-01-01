@@ -45,6 +45,8 @@ type IPAReconciler struct {
 // +kubebuilder:rbac:groups=ipa.shafinhasnat.me,resources=ipas,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=ipa.shafinhasnat.me,resources=ipas/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=ipa.shafinhasnat.me,resources=ipas/finalizers,verbs=update
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -78,7 +80,7 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{RequeueAfter: time.Duration(1 * time.Minute)}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(5 * time.Minute)}, nil
 }
 
 func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.Request) error {
