@@ -59,13 +59,13 @@ type IPAReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
-
-	// TODO(user): your logic here
 	ipa := &ipav1alpha1.IPA{}
 	err := r.Get(ctx, req.NamespacedName, ipa)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	event := &corev1.Event{}
+	r.Get(ctx, types.NamespacedName{}, event)
 	err = r.IPA(ctx, ipa, req)
 	if err != nil {
 		ipa.Status.Status = string(err.Error())
