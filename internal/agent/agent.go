@@ -53,7 +53,7 @@ func PrometheusAPI(baseURL string, deployment string, pods string, promql string
 	}
 	return string(body), nil
 }
-func QueryPrometheus(prometheus string, deployment string, pods []string, namespace string, resourceInfo string) (string, error) {
+func QueryPrometheus(prometheus string, deployment string, pods []string, namespace string, resourceInfo string, events []map[string]string) (string, error) {
 	baseURL := fmt.Sprintf("%s/api/v1/query_range", prometheus)
 	podNames := strings.Join(pods, "|")
 	promql_deployment_replica := fmt.Sprintf("kube_deployment_spec_replicas{deployment=\"%s\", namespace=\"%s\"}", deployment, namespace)
@@ -76,7 +76,12 @@ func QueryPrometheus(prometheus string, deployment string, pods []string, namesp
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_node_available_memory)
 	}
-	response := fmt.Sprintf("Deployment replicas - promql: %s metrics: %s\nCPU usage - promql: %s metrics: %s\nRAM usage - promql: %s metrics: %s\nResource request and limits: %s\nNode available memory - promql: %s metrics: %s", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage, resourceInfo, promql_node_available_memory, node_available_memory)
+	events_str := ""
+	for _, event := range events {
+		events_str += fmt.Sprintf("Pod Name: %s, Event Type: %s, Event Reason: %s, Event Message: %s\n", event["pod"], event["type"], event["reason"], event["message"])
+	}
+	response := fmt.Sprintf("Deployment replicas -\npromql: %s metrics: %s\nCPU usage -\npromql: %s metrics: %s\nRAM usage -\npromql: %s metrics: %s\nResource request and limits: %s\nNode available memory -\npromql: %s metrics: %s\nEvents:\n%s", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage, resourceInfo, promql_node_available_memory, node_available_memory, events_str)
+
 	return string(response), nil
 }
 
@@ -108,5 +113,6 @@ func GeminiAPI(url string, prompt string) (LLMResponse, error) {
 	if err := json.Unmarshal(body, &response); err != nil {
 		return LLMResponse{}, fmt.Errorf("error unmarshalling response: %v", err)
 	}
+	fmt.Println(response)
 	return response, nil
 }
