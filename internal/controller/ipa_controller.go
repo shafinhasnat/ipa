@@ -64,13 +64,12 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	event := &corev1.Event{}
-	r.Get(ctx, types.NamespacedName{}, event)
 	err = r.IPA(ctx, ipa, req)
 	if err != nil {
 		ipa.Status.Status = string(err.Error())
 		err = r.Status().Update(ctx, ipa)
 		if err != nil {
+			// fmt.Println("ERROR UPDATING ERROR STATUS")
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, err
@@ -78,9 +77,10 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	ipa.Status.Status = "Success"
 	err = r.Status().Update(ctx, ipa)
 	if err != nil {
+		// fmt.Println("ERROR UPDATING STATUS")
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{RequeueAfter: time.Duration(1 * time.Minute)}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(10 * time.Second)}, nil
 }
 
 func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.Request) error {
@@ -106,10 +106,19 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 			return fmt.Errorf("error getting pods: %v", err)
 		}
 		var podNames []string
+		var events []map[string]string
 		for _, pod := range podList.Items {
+			event := &corev1.EventList{}
+			err = r.List(ctx, event, client.InNamespace(pod.Namespace), client.MatchingFields(map[string]string{"involvedObject.name": pod.Name}))
+			if err != nil {
+				return fmt.Errorf("error getting event: %v", err)
+			}
+			for _, item := range event.Items {
+				events = append(events, map[string]string{"pod": pod.Name, "type": item.Type, "reason": item.Reason, "message": item.Message})
+			}
 			podNames = append(podNames, pod.Name)
 		}
-		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, podNames, ipagroup.Namespace, resourceInfo)
+		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, podNames, ipagroup.Namespace, resourceInfo, events)
 		if err != nil {
 			return fmt.Errorf("error querying prometheus: %v", err)
 		}
@@ -147,6 +156,14 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *IPAReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Add field indexer for events
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Event{}, "involvedObject.name", func(obj client.Object) []string {
+		event := obj.(*corev1.Event)
+		return []string{event.InvolvedObject.Name}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ipav1alpha1.IPA{}).
 		Named("ipa").
