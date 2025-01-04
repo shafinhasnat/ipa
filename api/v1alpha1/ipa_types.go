@@ -29,7 +29,7 @@ type IPASpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of IPA. Edit ipa_types.go to remove/update
-	Metadata Metadata `json:"metadata,omitempty"`
+	Metadata Metadata `json:"metadata"`
 }
 
 type Metadata struct {
@@ -41,6 +41,7 @@ type Metadata struct {
 type IPAGroup struct {
 	Deployment string `json:"deployment"`
 	Namespace  string `json:"namespace"`
+	Ingress    string `json:"ingress,omitempty"`
 }
 
 // IPAStatus defines the observed state of IPA.

@@ -7,8 +7,9 @@ metadata:
   name: ipa-sample
 spec:
   metadata:
-    prometheusUri: http://prometheus-server.default.svc
-    llmAgent: http://192.168.0.236:5000
+    prometheusUri: http://127.0.0.1:9090
+    llmAgent: http://127.0.0.1:5001
     ipaGroup:
       - deployment: cpuload
         namespace: cpuload
+        ingress: ingress-cpuload
