@@ -80,7 +80,7 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		// fmt.Println("ERROR UPDATING STATUS")
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{RequeueAfter: time.Duration(10 * time.Second)}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(1 * time.Minute)}, nil
 }
 
 func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.Request) error {
@@ -118,7 +118,7 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 			}
 			podNames = append(podNames, pod.Name)
 		}
-		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, podNames, ipagroup.Namespace, resourceInfo, events)
+		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, podNames, ipagroup.Namespace, resourceInfo, events, ipagroup.Ingress)
 		if err != nil {
 			return fmt.Errorf("error querying prometheus: %v", err)
 		}

@@ -51,9 +51,10 @@ func PrometheusAPI(baseURL string, deployment string, pods string, promql string
 	if err != nil {
 		return "", fmt.Errorf("error reading prometheus api response body: %v", err)
 	}
-	return string(body), nil
+	body_str := strings.ReplaceAll(string(body), `\`, "")
+	return body_str, nil
 }
-func QueryPrometheus(prometheus string, deployment string, pods []string, namespace string, resourceInfo string, events []map[string]string) (string, error) {
+func QueryPrometheus(prometheus string, deployment string, pods []string, namespace string, resourceInfo string, events []map[string]string, ingress string) (string, error) {
 	baseURL := fmt.Sprintf("%s/api/v1/query_range", prometheus)
 	podNames := strings.Join(pods, "|")
 	promql_deployment_replica := fmt.Sprintf("kube_deployment_spec_replicas{deployment=\"%s\", namespace=\"%s\"}", deployment, namespace)
@@ -80,7 +81,12 @@ func QueryPrometheus(prometheus string, deployment string, pods []string, namesp
 	for _, event := range events {
 		events_str += fmt.Sprintf("Pod Name: %s, Event Type: %s, Event Reason: %s, Event Message: %s\n", event["pod"], event["type"], event["reason"], event["message"])
 	}
-	response := fmt.Sprintf("Deployment replicas -\npromql: %s metrics: %s\nCPU usage -\npromql: %s metrics: %s\nRAM usage -\npromql: %s metrics: %s\nResource request and limits: %s\nNode available memory -\npromql: %s metrics: %s\nEvents:\n%s", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage, resourceInfo, promql_node_available_memory, node_available_memory, events_str)
+	promql_ingress_requests := fmt.Sprintf("sum(rate(nginx_ingress_controller_requests{ingress=\"%s\"}[2m]))", ingress)
+	ingress_requsts, err := PrometheusAPI(baseURL, deployment, podNames, promql_ingress_requests)
+	if err != nil {
+		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_ingress_requests)
+	}
+	response := fmt.Sprintf("Deployment replicas -\npromql: %s metrics: %s\nCPU usage -\npromql: %s metrics: %s\nRAM usage -\npromql: %s metrics: %s\nResource request and limits: %s\nNode available memory -\npromql: %s metrics: %s\nEvents:\n%s\nHttp requests:\nprmql: %s metrics:%s", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage, resourceInfo, promql_node_available_memory, node_available_memory, events_str, promql_ingress_requests, ingress_requsts)
 
 	return string(response), nil
 }

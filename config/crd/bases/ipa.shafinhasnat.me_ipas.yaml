@@ -48,6 +48,8 @@ spec:
                       properties:
                         deployment:
                           type: string
+                        ingress:
+                          type: string
                         namespace:
                           type: string
                       required:
@@ -64,6 +66,8 @@ spec:
                 - llmAgent
                 - prometheusUri
                 type: object
+            required:
+            - metadata
             type: object
           status:
             description: IPAStatus defines the observed state of IPA.
