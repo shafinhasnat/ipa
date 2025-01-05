@@ -56,6 +56,8 @@ spec:
                       properties:
                         deployment:
                           type: string
+                        ingress:
+                          type: string
                         namespace:
                           type: string
                       required:
@@ -72,6 +74,8 @@ spec:
                 - llmAgent
                 - prometheusUri
                 type: object
+            required:
+            - metadata
             type: object
           status:
             description: IPAStatus defines the observed state of IPA.
@@ -196,6 +200,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - events
   - pods
   verbs:
   - get
@@ -358,7 +363,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: shafinhasnat/ipa:v1.1
+        image: shafinhasnat/ipa:v1.2
         livenessProbe:
           httpGet:
             path: /healthz
