@@ -26,4 +26,4 @@ go.work
 *.swo
 *~
 
-ipa_main.yaml
+config/samples/*
