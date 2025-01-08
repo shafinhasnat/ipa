@@ -70,7 +70,6 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		ipa.Status.Status = string(err.Error())
 		err = r.Status().Update(ctx, ipa)
 		if err != nil {
-			// fmt.Println("ERROR UPDATING ERROR STATUS")
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, err
@@ -78,7 +77,6 @@ func (r *IPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	ipa.Status.Status = "Success"
 	err = r.Status().Update(ctx, ipa)
 	if err != nil {
-		// fmt.Println("ERROR UPDATING STATUS")
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{RequeueAfter: time.Duration(1 * time.Minute)}, nil
@@ -119,7 +117,7 @@ func (r *IPAReconciler) IPA(ctx context.Context, ipa *ipav1alpha1.IPA, req ctrl.
 			}
 			podNames = append(podNames, pod.Name)
 		}
-		prometheusData, err := controller.QueryPrometheus(prometheus, deployment.Name, podNames, ipagroup.Namespace, resourceInfo, events, ipagroup.Ingress)
+		prometheusData, err := controller.MetricsBuilder(prometheus, deployment.Name, podNames, ipagroup.Namespace, resourceInfo, events, ipagroup.Ingress)
 		if err != nil {
 			return fmt.Errorf("error querying prometheus: %v", err)
 		}
