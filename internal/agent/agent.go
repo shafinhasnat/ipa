@@ -24,7 +24,7 @@ type Config struct {
 	MemoryRequest string `json:"memory_request"`
 }
 
-func PrometheusAPI(baseURL string, deployment string, pods string, promql string) (string, error) {
+func PrometheusAPI(baseURL string, promql string, category string) (string, error) {
 	req, err := http.NewRequest("GET", baseURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating prometheus api request: %v", err)
@@ -51,50 +51,61 @@ func PrometheusAPI(baseURL string, deployment string, pods string, promql string
 	if err != nil {
 		return "", fmt.Errorf("error reading prometheus api response body: %v", err)
 	}
-	body_str := strings.ReplaceAll(string(body), `\`, "")
-	return body_str, nil
+	metrics := strings.ReplaceAll(string(body), `\`, "")
+
+	response := fmt.Sprintf("%s-\nPromQL: %s Metrics: %s\n", category, promql, metrics)
+	return response, nil
 }
-func QueryPrometheus(prometheus string, deployment string, pods []string, namespace string, resourceInfo string, events []map[string]string, ingress string) (string, error) {
+
+func MetricsBuilder(prometheus string, deployment string, pods []string, namespace string, resourceInfo string, events []map[string]string, ingress string) (string, error) {
 	baseURL := fmt.Sprintf("%s/api/v1/query_range", prometheus)
+
 	podNames := strings.Join(pods, "|")
 	promql_deployment_replica := fmt.Sprintf("kube_deployment_spec_replicas{deployment=\"%s\", namespace=\"%s\"}", deployment, namespace)
-	deployment_replicas, err := PrometheusAPI(baseURL, deployment, podNames, promql_deployment_replica)
+	deployment_replicas, err := PrometheusAPI(baseURL, promql_deployment_replica, "Deployment Replicas")
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_deployment_replica)
 	}
+
 	promql_cpu_usage := fmt.Sprintf("rate(container_cpu_usage_seconds_total{pod=~\"%s\", namespace=\"%s\"}[2m])", podNames, namespace)
-	cpu_usage, err := PrometheusAPI(baseURL, deployment, podNames, promql_cpu_usage)
+	cpu_usage, err := PrometheusAPI(baseURL, promql_cpu_usage, "CPU Usage")
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_cpu_usage)
 	}
+
 	promql_ram_usage := fmt.Sprintf("avg(container_memory_usage_bytes{pod=~\"%s\", namespace=\"%s\"})", podNames, namespace)
-	ram_usage, err := PrometheusAPI(baseURL, deployment, podNames, promql_ram_usage)
+	ram_usage, err := PrometheusAPI(baseURL, promql_ram_usage, "RAM Usage")
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_ram_usage)
 	}
+
 	promql_node_available_memory := "node_memory_MemAvailable_bytes"
-	node_available_memory, err := PrometheusAPI(baseURL, deployment, podNames, promql_node_available_memory)
+	node_available_memory, err := PrometheusAPI(baseURL, promql_node_available_memory, "Node Available Memory")
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_node_available_memory)
 	}
-	events_str := ""
-	for _, event := range events {
-		events_str += fmt.Sprintf("Pod Name: %s, Event Type: %s, Event Reason: %s, Event Message: %s\n", event["pod"], event["type"], event["reason"], event["message"])
-	}
+
 	promql_ingress_requests := fmt.Sprintf("sum(rate(nginx_ingress_controller_requests{ingress=\"%s\"}[2m]))", ingress)
-	ingress_requsts, err := PrometheusAPI(baseURL, deployment, podNames, promql_ingress_requests)
+	ingress_requsts, err := PrometheusAPI(baseURL, promql_ingress_requests, "HTTP Request Rate")
 	if err != nil {
 		return "", fmt.Errorf("error querying prometheus: %v, query: %s", err, promql_ingress_requests)
 	}
-	response := fmt.Sprintf("Deployment replicas -\npromql: %s metrics: %s\nCPU usage -\npromql: %s metrics: %s\nRAM usage -\npromql: %s metrics: %s\nResource request and limits: %s\nNode available memory -\npromql: %s metrics: %s\nEvents:\n%s\nHttp requests:\nprmql: %s metrics:%s", promql_deployment_replica, deployment_replicas, promql_cpu_usage, cpu_usage, promql_ram_usage, ram_usage, resourceInfo, promql_node_available_memory, node_available_memory, events_str, promql_ingress_requests, ingress_requsts)
 
+	events_str := "Events of the pods-\n"
+	for _, event := range events {
+		events_str += fmt.Sprintf("Pod Name: %s, Event Type: %s, Event Reason: %s, Event Message: %s\n", event["pod"], event["type"], event["reason"], event["message"])
+	}
+	resourceInfo = fmt.Sprintf("Resource requests and limits-\n%s\n", resourceInfo)
+	response := fmt.Sprintf("%s%s%s%s%s%s%s", deployment_replicas, cpu_usage, ram_usage, node_available_memory, ingress_requsts, resourceInfo, events_str)
 	return string(response), nil
 }
 
 func GeminiAPI(url string, prompt string) (LLMResponse, error) {
 	url = fmt.Sprintf("%s/askllm", url)
+
 	prompt = strings.ReplaceAll(prompt, "\n", "\\n")
-	prompt = strings.ReplaceAll(prompt, "\"", "\\\"")
+	prompt = strings.ReplaceAll(prompt, `"`, "")
+
 	payload := fmt.Sprintf(`{"metrics": "%s"}`, prompt)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(payload)))
 	if err != nil {
