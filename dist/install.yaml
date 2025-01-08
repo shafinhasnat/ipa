@@ -363,7 +363,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: shafinhasnat/ipa:v1.2
+        image: shafinhasnat/ipa:v1.2.1
         livenessProbe:
           httpGet:
             path: /healthz
