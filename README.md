@@ -82,14 +82,3 @@ make build-installer IMG=shafinhasnat/ipa:<version>
 
 ### Conclusion
 The Intelligent Pod Autoscaler (IPA) ensures the perfect assignment of resources and replicas by leveraging the power of AI. By analyzing real-time metrics and predicting workload patterns, IPA simplifies the complexities of autoscaling applications in Kubernetes clusters. It empowers teams to optimize performance, reduce costs, and achieve greater operational efficiency. Whether handling sudden traffic spikes or maintaining resource efficiency during low demand, IPA is the intelligent choice for modern application scaling.
-
-### Future work
-- Support for cluster autoscaling
-- Support for more metrics
-- Support for more AI models
-- Support for more Kubernetes resources
-
----
-*Team GG
-Syed Shafin Hasnat
-Humayra Akter*
