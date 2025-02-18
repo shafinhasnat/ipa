@@ -40,9 +40,8 @@ Once these components are in place, IPA can be deployed and configured to manage
 
 To deploy IPA Custom Resource Definition (CRD), use the following command -
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/shafinhasnat/ipa/refs/heads/main/dist/install.yaml?token=GHSAT0AAAAAAC5ELJ5KMUCZDFQPWZELOFW2Z4HUJLA
+kubectl apply -f https://raw.githubusercontent.com/shafinhasnat/ipa/refs/heads/main/dist/install.yaml
 ```
-*Note: The repo is currently private and will be made public soon.*
 
 Then create IPA custom resource with `kubectl apply -f`. 
 ```yaml
